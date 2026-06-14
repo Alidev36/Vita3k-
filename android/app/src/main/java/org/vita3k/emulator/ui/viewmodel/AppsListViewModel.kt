@@ -1,6 +1,7 @@
 package org.vita3k.emulator.ui.viewmodel
 
 import android.app.Application
+import android.content.SharedPreferences
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.derivedStateOf
@@ -31,6 +32,9 @@ class AppsListViewModel(application: Application) : AndroidViewModel(application
     private fun qty(@PluralsRes id: Int, quantity: Int, vararg args: Any): String =
         getApplication<Application>().resources.getQuantityString(id, quantity, *args)
 
+    private val prefs: SharedPreferences =
+        application.getSharedPreferences("apps_list_prefs", android.content.Context.MODE_PRIVATE)
+
     private val _allApps = mutableListOf<AppInfo>()
     val apps = mutableStateListOf<AppInfo>()
     private val _selectedAppIds = mutableStateListOf<String>()
@@ -59,7 +63,13 @@ class AppsListViewModel(application: Application) : AndroidViewModel(application
         private set
     var sortOption by mutableStateOf(SortOption.TITLE)
         private set
-    var viewMode by mutableStateOf(ViewMode.LIST)
+    var viewMode by mutableStateOf(
+        // Restore persisted view mode, default to LIST if not saved yet
+        if (prefs.getString("view_mode", ViewMode.LIST.name) == ViewMode.GRID.name)
+            ViewMode.GRID
+        else
+            ViewMode.LIST
+    )
         private set
     var appVersion by mutableStateOf("")
         private set
@@ -128,6 +138,8 @@ class AppsListViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleViewMode() {
         viewMode = if (viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
+        // Persist the new view mode so it survives process death
+        prefs.edit().putString("view_mode", viewMode.name).apply()
     }
 
     fun dismissActionResult() {
